@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  --color-rose-boutique: #f43f5e;
+  --color-pink-soft: #fce7f3;
+  --font-poppins: "Poppins", sans-serif;
+  --font-barlow: "Barlow", sans-serif;
+}
+
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Barlow";
+  src: url("/fonts/Barlow-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+* {
+  font-family: "Barlow", sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Poppins", sans-serif;
+}

@@ -7,9 +7,7 @@ export default function Error403() {
       title="Forbidden"
       description="Tidak diizinkan. Anda tidak memiliki akses ke halaman ini."
       image="/img/error403.png"
-      bgColor="#ede9fe"
-      codeColor="#f43f5e"
-      btnColor="#f43f5e"
+      accentColor="#b59ac9"
     />
   );
 }

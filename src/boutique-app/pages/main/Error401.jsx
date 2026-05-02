@@ -7,9 +7,7 @@ export default function Error401() {
       title="Unauthorized"
       description="Akses ditolak. Anda perlu login untuk mengakses halaman ini."
       image="/img/error401.png"
-      bgColor="#e0f7fa"
-      codeColor="#f43f5e"
-      btnColor="#f43f5e"
+      accentColor="#c9a96e"
     />
   );
 }

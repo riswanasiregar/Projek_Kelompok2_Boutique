@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, Link } from 'react-router-dom';
 import customersData from '../../data/customers.json';
 import PageHeader from '../../components/PageHeader';
+import { BsPlusLg, BsSearch, BsArrowRight } from 'react-icons/bs';
 
 export function LoyaltyBadge({ loyalty }) {
   const map = {
@@ -60,10 +61,8 @@ export default function Customers() {
       <PageHeader title="Customers" breadcrumb={['Dashboard', 'Customers']}>
         <button onClick={() => setShowForm(true)}
           className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl transition-opacity hover:opacity-90"
-          style={{ background: '#3d2e22', color: '#c9a96e' }}>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
+          style={{ background: '#1A1614', color: '#C8A96A' }}>
+          <BsPlusLg size={14} />
           Add Customer
         </button>
       </PageHeader>
@@ -91,9 +90,7 @@ export default function Customers() {
         {searchQuery && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
             style={{ background: '#f0e8d8', color: '#8b7355', border: '1px solid #d4c4b0' }}>
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <BsSearch size={10} />
             "{searchQuery}" — {filtered.length} result{filtered.length !== 1 ? 's' : ''}
           </div>
         )}
@@ -133,12 +130,25 @@ export default function Customers() {
                         style={{ background: '#ede5d8', color: '#6b5040' }}>
                         {c.name[0]}
                       </div>
-                      <span className="font-medium" style={{ color: '#3d2e22' }}>{c.name}</span>
+                      <Link to={`/customers/${c.id}`}
+                        className="font-medium hover:underline"
+                        style={{ color: '#3d2e22' }}>
+                        {c.name}
+                      </Link>
                     </div>
                   </td>
                   <td className="px-6 py-3.5 text-xs" style={{ color: '#9a8878' }}>{c.email}</td>
                   <td className="px-6 py-3.5 text-xs" style={{ color: '#9a8878' }}>{c.phone}</td>
-                  <td className="px-6 py-3.5"><LoyaltyBadge loyalty={c.loyalty} /></td>
+                  <td className="px-6 py-3.5">
+                    <div className="flex items-center justify-between">
+                      <LoyaltyBadge loyalty={c.loyalty} />
+                      <Link to={`/customers/${c.id}`}
+                        className="text-xs font-semibold hover:underline ml-3 flex items-center gap-1"
+                        style={{ color: '#8b7355' }}>
+                        Detail <BsArrowRight size={10} />
+                      </Link>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -168,9 +178,7 @@ export default function Customers() {
                 style={{ color: '#c4b5a5' }}
                 onMouseEnter={e => e.currentTarget.style.background = '#4e3c2e'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <BsPlusLg size={12} style={{ transform: 'rotate(45deg)' }} />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">

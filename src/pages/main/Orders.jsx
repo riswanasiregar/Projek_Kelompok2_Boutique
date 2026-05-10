@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, Link } from 'react-router-dom';
 import ordersData from '../../data/orders.json';
 import PageHeader from '../../components/PageHeader';
+import { BsPlusLg, BsSearch, BsGeoAlt, BsArrowRight } from 'react-icons/bs';
 
 export function StatusBadge({ status }) {
   const map = {
@@ -19,7 +20,7 @@ export function StatusBadge({ status }) {
   );
 }
 
-const emptyForm = { customerName: '', status: 'Pending', totalPrice: '', orderDate: '' };
+const emptyForm = { customerName: '', status: 'Pending', totalPrice: '', orderDate: '', address: '' };
 
 const inputStyle = {
   background: '#f5f0eb', border: '1.5px solid #d4c4b0', color: '#3d2e22',
@@ -33,7 +34,6 @@ export default function Orders() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
 
-  // Filter by status chip + search
   const filtered = orders.filter(o => {
     const matchStatus = activeFilter === 'All' || o.status === activeFilter;
     const q = searchQuery.toLowerCase();
@@ -53,7 +53,7 @@ export default function Orders() {
   function handleSubmit(e) {
     e.preventDefault();
     const newId = `ORD-${String(orders.length + 1).padStart(3, '0')}`;
-    setOrders([{ id: newId, customerName: form.customerName, status: form.status, totalPrice: Number(form.totalPrice), orderDate: form.orderDate }, ...orders]);
+    setOrders([{ id: newId, customerName: form.customerName, status: form.status, totalPrice: Number(form.totalPrice), orderDate: form.orderDate, address: form.address }, ...orders]);
     setForm(emptyForm);
     setShowForm(false);
   }
@@ -70,10 +70,8 @@ export default function Orders() {
       <PageHeader title="Orders" breadcrumb={['Dashboard', 'Orders']}>
         <button onClick={() => setShowForm(true)}
           className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl transition-opacity hover:opacity-90"
-          style={{ background: '#3d2e22', color: '#c9a96e' }}>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
+          style={{ background: '#1A1614', color: '#C8A96A' }}>
+          <BsPlusLg size={14} />
           Add Order
         </button>
       </PageHeader>
@@ -103,9 +101,7 @@ export default function Orders() {
         {searchQuery && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
             style={{ background: '#f0e8d8', color: '#8b7355', border: '1px solid #d4c4b0' }}>
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <BsSearch size={10} />
             "{searchQuery}" — {filtered.length} result{filtered.length !== 1 ? 's' : ''}
           </div>
         )}
@@ -117,8 +113,8 @@ export default function Orders() {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ background: '#faf7f4', borderBottom: '1px solid #ede5d8' }}>
-                {['Order ID', 'Customer', 'Date', 'Status', 'Total'].map((h, i) => (
-                  <th key={h} className={`px-6 py-3.5 text-xs font-semibold uppercase tracking-wider ${i === 4 ? 'text-right' : 'text-left'}`}
+                {['Order ID', 'Customer', 'Alamat Pengiriman', 'Date', 'Status', 'Total'].map((h, i) => (
+                  <th key={h} className={`px-6 py-3.5 text-xs font-semibold uppercase tracking-wider ${i === 5 ? 'text-right' : 'text-left'}`}
                     style={{ color: '#9a8878' }}>{h}</th>
                 ))}
               </tr>
@@ -126,7 +122,7 @@ export default function Orders() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
+                  <td colSpan={6} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <span className="text-3xl">🔍</span>
                       <p className="text-sm font-medium" style={{ color: '#9a8878' }}>No orders found</p>
@@ -139,14 +135,32 @@ export default function Orders() {
                   onMouseEnter={e => e.currentTarget.style.background = '#faf7f4'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                   <td className="px-6 py-3.5">
-                    <span className="font-mono text-xs px-2 py-0.5 rounded-md"
-                      style={{ background: '#f5f0eb', color: '#8b7355' }}>{order.id}</span>
+                    <Link to={`/orders/${order.id}`}
+                      className="font-mono text-xs px-2 py-0.5 rounded-md hover:underline"
+                      style={{ background: '#f5f0eb', color: '#8b7355' }}>
+                      {order.id}
+                    </Link>
                   </td>
                   <td className="px-6 py-3.5 font-medium" style={{ color: '#3d2e22' }}>{order.customerName}</td>
+                  <td className="px-6 py-3.5">
+                    <div className="flex items-start gap-1.5 max-w-[200px]">
+                      <BsGeoAlt size={11} className="flex-shrink-0 mt-0.5" style={{ color: '#9a8878' }} />
+                      <span className="text-xs leading-relaxed" style={{ color: '#9a8878' }}>
+                        {order.address || '-'}
+                      </span>
+                    </div>
+                  </td>
                   <td className="px-6 py-3.5 text-xs" style={{ color: '#9a8878' }}>{order.orderDate}</td>
                   <td className="px-6 py-3.5"><StatusBadge status={order.status} /></td>
-                  <td className="px-6 py-3.5 text-right font-bold" style={{ color: '#3d2e22' }}>
-                    Rp {order.totalPrice.toLocaleString('id-ID')}
+                  <td className="px-6 py-3.5 text-right">
+                    <p className="font-bold text-sm" style={{ color: '#3d2e22' }}>
+                      Rp {order.totalPrice.toLocaleString('id-ID')}
+                    </p>
+                    <Link to={`/orders/${order.id}`}
+                      className="text-xs font-semibold hover:underline flex items-center gap-1"
+                      style={{ color: '#8b7355' }}>
+                      Detail <BsArrowRight size={10} />
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -178,9 +192,7 @@ export default function Orders() {
                 style={{ color: '#c4b5a5' }}
                 onMouseEnter={e => e.currentTarget.style.background = '#4e3c2e'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <BsPlusLg size={12} style={{ transform: 'rotate(45deg)' }} />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -188,6 +200,7 @@ export default function Orders() {
                 { label: 'Customer Name', name: 'customerName', type: 'text', placeholder: 'e.g. Andi Saputra' },
                 { label: 'Total Price (Rp)', name: 'totalPrice', type: 'number', placeholder: 'e.g. 150000' },
                 { label: 'Order Date', name: 'orderDate', type: 'date' },
+                { label: 'Alamat Pengiriman', name: 'address', type: 'text', placeholder: 'e.g. Jl. Sudirman No. 12, Jakarta' },
               ].map(f => (
                 <div key={f.name}>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: '#5a4535' }}>{f.label}</label>

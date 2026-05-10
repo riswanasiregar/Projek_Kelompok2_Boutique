@@ -1,243 +1,341 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useOutletContext } from 'react-router-dom';
 import ordersData from '../../data/orders.json';
 import customersData from '../../data/customers.json';
-import PageHeader from '../../components/PageHeader';
+import {
+  BsClipboardCheck, BsPeopleFill, BsCurrencyDollar, BsXCircle
+} from 'react-icons/bs';
 
+const P = {
+  text:    '#1A1614',
+  muted:   '#8C7B6B',
+  accent:  '#C8A96A',
+  border:  '#EDE8E3',
+  surface: '#F5F0EB',
+};
+
+/* ── Status Badge ── */
 function StatusBadge({ status }) {
   const map = {
-    Completed: { bg: '#eef4ee', color: '#4a7c59', dot: '#6aab7a' },
-    Pending:   { bg: '#f7f3e8', color: '#8a6d2f', dot: '#c9a84c' },
-    Cancelled: { bg: '#f5eeec', color: '#8a4a3a', dot: '#c97060' },
+    Completed: { bg: '#EDFAF3', color: '#2D7A55', dot: '#4AAB7A' },
+    Pending:   { bg: '#FDF8EC', color: '#8A6D2F', dot: '#C8A96A' },
+    Cancelled: { bg: '#FDF0EE', color: '#8A3A2A', dot: '#C97060' },
   };
-  const s = map[status] || { bg: '#f5f0eb', color: '#8a7060', dot: '#c9b99a' };
+  const s = map[status] || { bg: '#F5F0EB', color: '#8C7B6B', dot: '#C8A96A' };
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
       style={{ background: s.bg, color: s.color }}>
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.dot }} />
+      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.dot }} />
       {status}
     </span>
   );
 }
 
-export function computeStats(orders, customers) {
-  const totalOrders = orders.length;
-  const totalDelivered = orders.filter(o => o.status === 'Completed').length;
-  const totalCancelled = orders.filter(o => o.status === 'Cancelled').length;
-  const totalRevenue = orders.filter(o => o.status === 'Completed').reduce((s, o) => s + o.totalPrice, 0);
-  const totalCustomers = customers.length;
-  return { totalOrders, totalDelivered, totalCancelled, totalRevenue, totalCustomers };
+/* ── Mini Calendar ── */
+function MiniCalendar() {
+  const today = new Date();
+  const [cur, setCur] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const year  = cur.getFullYear();
+  const month = cur.getMonth();
+  const monthName  = cur.toLocaleString('en', { month: 'long' });
+  const firstDay   = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const cells = Array(firstDay).fill(null).concat(
+    Array.from({ length: daysInMonth }, (_, i) => i + 1)
+  );
+  const isToday = d =>
+    d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+
+  return (
+    <div className="rounded-2xl p-4" style={{ background: '#fff', border: `1px solid ${P.border}` }}>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-bold" style={{ color: P.text }}>{monthName} {year}</p>
+        <div className="flex gap-1">
+          {['‹', '›'].map((ch, i) => (
+            <button key={i}
+              onClick={() => setCur(new Date(year, month + (i === 0 ? -1 : 1), 1))}
+              className="w-6 h-6 rounded-lg flex items-center justify-center text-sm transition-colors"
+              style={{ color: P.muted }}
+              onMouseEnter={e => e.currentTarget.style.background = P.surface}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              {ch}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-7 gap-0.5 mb-1">
+        {days.map(d => (
+          <div key={d} className="text-center text-xs font-semibold py-1" style={{ color: P.muted }}>{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((d, i) => (
+          <div key={i}
+            className="text-center text-xs py-1.5 rounded-lg cursor-pointer transition-colors"
+            style={d && isToday(d)
+              ? { background: '#1A1614', color: '#C8A96A', fontWeight: 700 }
+              : d ? { color: P.text } : {}
+            }
+            onMouseEnter={e => d && !isToday(d) && (e.currentTarget.style.background = P.surface)}
+            onMouseLeave={e => d && !isToday(d) && (e.currentTarget.style.background = 'transparent')}>
+            {d || ''}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-export function getRecentOrders(orders) {
-  return [...orders].reverse().slice(0, 5);
-}
-
+/* ── Main ── */
 export default function Dashboard() {
   const { searchQuery = '' } = useOutletContext?.() || {};
-  const stats = computeStats(ordersData, customersData);
-  const recentOrders = getRecentOrders(ordersData).filter(o => {
+
+  const totalOrders    = ordersData.length;
+  const completed      = ordersData.filter(o => o.status === 'Completed').length;
+  const pending        = ordersData.filter(o => o.status === 'Pending').length;
+  const cancelled      = ordersData.filter(o => o.status === 'Cancelled').length;
+  const totalRevenue   = ordersData.filter(o => o.status === 'Completed').reduce((s, o) => s + o.totalPrice, 0);
+  const totalCustomers = customersData.length;
+
+  const recentOrders = [...ordersData].reverse().slice(0, 5).filter(o => {
     const q = searchQuery.toLowerCase();
     return !q || o.customerName.toLowerCase().includes(q) || o.id.toLowerCase().includes(q);
   });
 
   const statCards = [
-    { label: 'Total Orders', value: stats.totalOrders, change: '+12%', up: true,
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>,
-      iconBg: '#3d2e22', iconColor: '#c9a96e' },
-    { label: 'Delivered', value: stats.totalDelivered, change: '+8%', up: true,
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 13l4 4L19 7" /></svg>,
-      iconBg: '#4a6a4a', iconColor: '#a8c9a0' },
-    { label: 'Cancelled', value: stats.totalCancelled, change: '-3%', up: false,
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 18L18 6M6 6l12 12" /></svg>,
-      iconBg: '#6a4040', iconColor: '#c9a8a0' },
-    { label: 'Revenue', value: `Rp ${(stats.totalRevenue / 1000000).toFixed(1)}M`, change: '+18%', up: true,
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-      iconBg: '#5a4020', iconColor: '#c9a96e' },
-    { label: 'Customers', value: stats.totalCustomers, change: '+5%', up: true,
-      icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
-      iconBg: '#4a5040', iconColor: '#a8b8c0' },
+    { label: 'Total Orders',    value: totalOrders,    sub: `${completed} selesai`,       change: '+12%', up: true,  icon: <BsClipboardCheck size={20} /> },
+    { label: 'Total Customers', value: totalCustomers, sub: `${customersData.filter(c => c.loyalty === 'Gold').length} gold members`, change: '+5%',  up: true,  icon: <BsPeopleFill size={20} /> },
+    { label: 'Revenue',         value: `Rp ${(totalRevenue / 1000000).toFixed(1)}M`, sub: 'dari order selesai', change: '+18%', up: true,  icon: <BsCurrencyDollar size={20} /> },
+    { label: 'Dibatalkan',      value: cancelled,      sub: `${pending} masih pending`,   change: '-3%',  up: false, icon: <BsXCircle size={20} /> },
+  ];
+
+  const activities = [
+    { text: `${ordersData[ordersData.length - 1].customerName} membuat order baru`,       time: '2m lalu',  icon: '🛍️' },
+    { text: `${customersData[customersData.length - 1].name} bergabung sebagai customer`, time: '15m lalu', icon: '👤' },
+    { text: `Order ${ordersData[ordersData.length - 3].id} selesai`,                      time: '1j lalu',  icon: '✅' },
+    { text: `${ordersData[ordersData.length - 5].customerName} order masih pending`,      time: '2j lalu',  icon: '⏳' },
+    { text: `Member Gold baru: ${customersData.find(c => c.loyalty === 'Gold')?.name}`,   time: '3j lalu',  icon: '👑' },
   ];
 
   return (
-    <div>
-      <PageHeader title="Dashboard" breadcrumb={['Dashboard', 'Overview']}>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs"
-          style={{ background: '#ede5d8', border: '1px solid #d4c4b0', color: '#8b7355' }}>
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          Jan – Mar 2026
-        </div>
-      </PageHeader>
+    <div className="space-y-5">
 
-      {/* Fashion quote banner */}
-      <div className="rounded-2xl px-6 py-4 mb-6 flex items-center justify-between overflow-hidden relative"
-        style={{ background: '#3d2e22' }}>
-        <div className="absolute right-0 top-0 bottom-0 w-64 opacity-10"
-          style={{ background: 'radial-gradient(circle at right, #c9a96e, transparent)' }} />
-        <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ background: '#c9a96e' }} />
-        <div className="pl-4">
-          <p className="text-xs font-medium mb-1" style={{ color: '#c9a96e' }}>✦ Style of the Day</p>
-          <p className="text-sm font-semibold italic" style={{ color: '#f5f0eb' }}>
-            "Fashion is the armor to survive the reality of everyday life."
-          </p>
-          <p className="text-xs mt-1" style={{ color: '#7a6a5a' }}>— Bill Cunningham</p>
-        </div>
-        <div className="hidden sm:flex items-center gap-2 flex-shrink-0 ml-6">
-          {['Dress', 'Top', 'Bottom', 'Outerwear'].map(cat => (
-            <span key={cat} className="px-2.5 py-1 rounded-full text-xs font-medium"
-              style={{ background: '#4e3c2e', color: '#c4b5a5' }}>{cat}</span>
-          ))}
-        </div>
-      </div>
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      {/* ── Row 1: Stat Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map(card => (
           <div key={card.label} className="rounded-2xl p-5 transition-shadow hover:shadow-md"
-            style={{ background: '#fff', border: '1px solid #e2d9ce' }}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: card.iconBg, color: card.iconColor }}>
+            style={{ background: '#fff', border: `1px solid ${P.border}` }}>
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                style={{ background: P.surface, color: '#5C4F45' }}>
                 {card.icon}
               </div>
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                 style={card.up
-                  ? { background: '#eef4ee', color: '#4a7c59' }
-                  : { background: '#f5eeec', color: '#8a4a3a' }}>
+                  ? { background: '#EDFAF3', color: '#2D7A55' }
+                  : { background: '#FDF0EE', color: '#8A3A2A' }}>
                 {card.change}
               </span>
             </div>
-            <p className="text-2xl font-bold" style={{ color: '#3d2e22' }}>{card.value}</p>
-            <p className="text-xs font-medium mt-0.5" style={{ color: '#9a8878' }}>{card.label}</p>
+            <p className="text-2xl font-bold leading-none mb-1" style={{ color: P.text }}>{card.value}</p>
+            <p className="text-xs font-semibold" style={{ color: P.text }}>{card.label}</p>
+            <p className="text-xs mt-0.5" style={{ color: P.muted }}>{card.sub}</p>
           </div>
         ))}
       </div>
 
-      {/* Bottom row */}
+      {/* ── Row 2: Order Status + Loyalty + Calendar ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Recent Orders */}
+
+        {/* Order Status breakdown */}
+        <div className="rounded-2xl p-5" style={{ background: '#fff', border: `1px solid ${P.border}` }}>
+          <p className="text-sm font-bold mb-1" style={{ color: P.text }}>Status Pesanan</p>
+          <p className="text-xs mb-4" style={{ color: P.muted }}>Ringkasan semua order</p>
+          {[
+            { label: 'Completed', count: completed,  color: '#4AAB7A', bg: '#EDFAF3', pct: Math.round(completed  / totalOrders * 100) },
+            { label: 'Pending',   count: pending,    color: '#C8A96A', bg: '#FDF8EC', pct: Math.round(pending    / totalOrders * 100) },
+            { label: 'Cancelled', count: cancelled,  color: '#C97060', bg: '#FDF0EE', pct: Math.round(cancelled  / totalOrders * 100) },
+          ].map(item => (
+            <div key={item.label} className="mb-4 last:mb-0">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full" style={{ background: item.color }} />
+                  <span className="text-xs font-medium" style={{ color: P.text }}>{item.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                    style={{ background: item.bg, color: item.color }}>{item.count}</span>
+                  <span className="text-xs" style={{ color: P.muted }}>{item.pct}%</span>
+                </div>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: P.border }}>
+                <div className="h-full rounded-full transition-all"
+                  style={{ width: `${item.pct}%`, background: item.color }} />
+              </div>
+            </div>
+          ))}
+          {/* Total */}
+          <div className="mt-4 pt-3 flex items-center justify-between"
+            style={{ borderTop: `1px solid ${P.border}` }}>
+            <span className="text-xs font-semibold" style={{ color: P.muted }}>Total Orders</span>
+            <span className="text-sm font-bold" style={{ color: P.text }}>{totalOrders}</span>
+          </div>
+        </div>
+
+        {/* Customer Loyalty */}
+        <div className="rounded-2xl p-5" style={{ background: '#fff', border: `1px solid ${P.border}` }}>
+          <p className="text-sm font-bold mb-1" style={{ color: P.text }}>Customer Loyalty</p>
+          <p className="text-xs mb-4" style={{ color: P.muted }}>Distribusi tier pelanggan</p>
+          {[
+            { tier: 'Gold',   icon: '👑', color: '#8A6D2F', bg: '#FDF8EC', pct: Math.round(customersData.filter(c => c.loyalty === 'Gold').length   / totalCustomers * 100), count: customersData.filter(c => c.loyalty === 'Gold').length },
+            { tier: 'Silver', icon: '⭐', color: '#5C6B7A', bg: '#EEF3F8', pct: Math.round(customersData.filter(c => c.loyalty === 'Silver').length / totalCustomers * 100), count: customersData.filter(c => c.loyalty === 'Silver').length },
+            { tier: 'Bronze', icon: '🥉', color: '#7A4A3A', bg: '#FDF0EE', pct: Math.round(customersData.filter(c => c.loyalty === 'Bronze').length / totalCustomers * 100), count: customersData.filter(c => c.loyalty === 'Bronze').length },
+          ].map(item => (
+            <div key={item.tier} className="mb-4 last:mb-0">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg flex items-center justify-center text-xs flex-shrink-0"
+                    style={{ background: item.bg }}>{item.icon}</span>
+                  <span className="text-xs font-medium" style={{ color: P.text }}>{item.tier}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold" style={{ color: item.color }}>{item.count} members</span>
+                  <span className="text-xs" style={{ color: P.muted }}>{item.pct}%</span>
+                </div>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: P.border }}>
+                <div className="h-full rounded-full" style={{ width: `${item.pct}%`, background: item.color }} />
+              </div>
+            </div>
+          ))}
+          <div className="mt-4 pt-3 flex items-center justify-between"
+            style={{ borderTop: `1px solid ${P.border}` }}>
+            <span className="text-xs font-semibold" style={{ color: P.muted }}>Total Customers</span>
+            <span className="text-sm font-bold" style={{ color: P.text }}>{totalCustomers}</span>
+          </div>
+        </div>
+
+        {/* Calendar */}
+        <MiniCalendar />
+      </div>
+
+      {/* ── Row 3: Recent Orders + Activity ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* Orders table — tanpa date strip */}
         <div className="lg:col-span-2 rounded-2xl overflow-hidden"
-          style={{ background: '#fff', border: '1px solid #e2d9ce' }}>
-          <div className="flex items-center justify-between px-6 py-4"
-            style={{ borderBottom: '1px solid #f0ebe4' }}>
+          style={{ background: '#fff', border: `1px solid ${P.border}` }}>
+          <div className="flex items-center justify-between px-5 py-4"
+            style={{ borderBottom: `1px solid ${P.border}`, background: P.surface }}>
             <div>
-              <h2 className="text-sm font-bold" style={{ color: '#3d2e22' }}>Recent Orders</h2>
-              <p className="text-xs mt-0.5" style={{ color: '#9a8878' }}>
-                {searchQuery ? `Filtered by "${searchQuery}"` : 'Latest 5 transactions'}
+              <p className="text-sm font-bold" style={{ color: P.text }}>Recent Orders</p>
+              <p className="text-xs" style={{ color: P.muted }}>
+                {searchQuery ? `Filter: "${searchQuery}"` : '5 transaksi terbaru'}
               </p>
             </div>
             <Link to="/orders"
               className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-90"
-              style={{ background: '#3d2e22', color: '#c9a96e' }}>
-              View All
+              style={{ background: '#1A1614', color: '#C8A96A' }}>
+              Lihat Semua
             </Link>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ background: '#faf7f4' }}>
-                  {['Order', 'Customer', 'Status', 'Total'].map((h, i) => (
-                    <th key={h} className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider ${i === 3 ? 'text-right' : 'text-left'}`}
-                      style={{ color: '#9a8878' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {recentOrders.length === 0 ? (
-                  <tr><td colSpan={4} className="px-6 py-8 text-center text-xs" style={{ color: '#9a8878' }}>
-                    No orders match your search
-                  </td></tr>
-                ) : recentOrders.map((order, i) => (
-                  <tr key={order.id} style={{ borderTop: i > 0 ? '1px solid #f5f0eb' : 'none' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#faf7f4'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td className="px-6 py-3.5">
-                      <span className="font-mono text-xs px-2 py-0.5 rounded-md"
-                        style={{ background: '#f5f0eb', color: '#8b7355' }}>{order.id}</span>
-                    </td>
-                    <td className="px-6 py-3.5">
-                      <p className="text-sm font-medium" style={{ color: '#3d2e22' }}>{order.customerName}</p>
-                      <p className="text-xs" style={{ color: '#9a8878' }}>{order.orderDate}</p>
-                    </td>
-                    <td className="px-6 py-3.5"><StatusBadge status={order.status} /></td>
-                    <td className="px-6 py-3.5 text-right font-bold" style={{ color: '#3d2e22' }}>
-                      Rp {order.totalPrice.toLocaleString('id-ID')}
-                    </td>
-                  </tr>
+
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ background: P.surface }}>
+                {['Order ID', 'Customer', 'Status', 'Total'].map((h, i) => (
+                  <th key={h}
+                    className={`px-5 py-3 text-xs font-semibold uppercase tracking-wider ${i === 3 ? 'text-right' : 'text-left'}`}
+                    style={{ color: P.muted }}>{h}</th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            </thead>
+            <tbody>
+              {recentOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-5 py-10 text-center text-xs" style={{ color: P.muted }}>
+                    Tidak ada order yang cocok
+                  </td>
+                </tr>
+              ) : recentOrders.map((order, i) => (
+                <tr key={order.id}
+                  style={{ borderTop: i > 0 ? `1px solid #F5F0EB` : 'none' }}
+                  onMouseEnter={e => e.currentTarget.style.background = P.surface}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <td className="px-5 py-3.5">
+                    <Link to={`/orders/${order.id}`}
+                      className="font-mono text-xs px-2 py-0.5 rounded-md hover:underline"
+                      style={{ background: P.surface, color: '#8C7B6B' }}>
+                      {order.id}
+                    </Link>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                        style={{ background: P.border, color: '#5C4F45' }}>
+                        {order.customerName[0]}
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium" style={{ color: P.text }}>{order.customerName}</p>
+                        <p className="text-xs" style={{ color: P.muted }}>{order.orderDate}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3.5"><StatusBadge status={order.status} /></td>
+                  <td className="px-5 py-3.5 text-right text-xs font-bold" style={{ color: P.text }}>
+                    Rp {order.totalPrice.toLocaleString('id-ID')}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        {/* Side panels */}
-        <div className="space-y-4">
-          {/* Order status */}
-          <div className="rounded-2xl p-5" style={{ background: '#fff', border: '1px solid #e2d9ce' }}>
-            <h3 className="text-sm font-bold mb-4" style={{ color: '#3d2e22' }}>Order Status</h3>
-            {[
-              { label: 'Completed', count: stats.totalDelivered, color: '#6aab7a', bg: '#eef4ee' },
-              { label: 'Pending', count: stats.totalOrders - stats.totalDelivered - stats.totalCancelled, color: '#c9a84c', bg: '#f7f3e8' },
-              { label: 'Cancelled', count: stats.totalCancelled, color: '#c97060', bg: '#f5eeec' },
-            ].map(item => (
-              <div key={item.label} className="mb-3 last:mb-0">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-medium" style={{ color: '#5a4535' }}>{item.label}</span>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                    style={{ background: item.bg, color: item.color }}>{item.count}</span>
+        {/* Recent Activity */}
+        <div className="rounded-2xl overflow-hidden" style={{ background: '#fff', border: `1px solid ${P.border}` }}>
+          <div className="flex items-center justify-between px-5 py-4"
+            style={{ borderBottom: `1px solid ${P.border}`, background: P.surface }}>
+            <p className="text-sm font-bold" style={{ color: P.text }}>Aktivitas Terbaru</p>
+          </div>
+          <div>
+            {activities.map((a, i) => (
+              <div key={i}
+                className="px-5 py-3.5 flex items-start gap-3 transition-colors"
+                style={{ borderTop: i > 0 ? `1px solid #F5F0EB` : 'none' }}
+                onMouseEnter={e => e.currentTarget.style.background = P.surface}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0"
+                  style={{ background: P.surface }}>
+                  {a.icon}
                 </div>
-                <div className="h-2 rounded-full overflow-hidden" style={{ background: '#f0ebe4' }}>
-                  <div className="h-full rounded-full transition-all"
-                    style={{ width: `${Math.round((item.count / stats.totalOrders) * 100)}%`, background: item.color }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium leading-snug" style={{ color: P.text }}>{a.text}</p>
+                  <p className="text-xs mt-0.5" style={{ color: P.muted }}>{a.time}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Loyalty */}
-          <div className="rounded-2xl p-5" style={{ background: '#fff', border: '1px solid #e2d9ce' }}>
-            <h3 className="text-sm font-bold mb-4" style={{ color: '#3d2e22' }}>Customer Loyalty</h3>
-            {[
-              { tier: 'Gold', bg: '#f7f3e8', color: '#8a6d2f', icon: '👑' },
-              { tier: 'Silver', bg: '#f0f4f8', color: '#4a6080', icon: '⭐' },
-              { tier: 'Bronze', bg: '#f5eeec', color: '#8a5a4a', icon: '🥉' },
-            ].map(item => {
-              const count = customersData.filter(c => c.loyalty === item.tier).length;
-              return (
-                <div key={item.tier} className="flex items-center justify-between py-2.5"
-                  style={{ borderBottom: '1px solid #f5f0eb' }}>
-                  <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-lg flex items-center justify-center text-sm"
-                      style={{ background: item.bg }}>{item.icon}</span>
-                    <span className="text-xs font-medium" style={{ color: '#5a4535' }}>{item.tier}</span>
-                  </div>
-                  <span className="text-xs font-bold" style={{ color: '#3d2e22' }}>{count} members</span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Top categories */}
-          <div className="rounded-2xl p-5" style={{ background: '#3d2e22' }}>
-            <h3 className="text-sm font-bold mb-3" style={{ color: '#f5f0eb' }}>Top Categories</h3>
-            {[
-              { name: 'Dress', pct: 38 },
-              { name: 'Outerwear', pct: 27 },
-              { name: 'Top', pct: 20 },
-              { name: 'Bottom', pct: 15 },
-            ].map(cat => (
-              <div key={cat.name} className="flex items-center justify-between py-1.5">
-                <span className="text-xs" style={{ color: '#c4b5a5' }}>{cat.name}</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-20 h-1.5 rounded-full overflow-hidden" style={{ background: '#4e3c2e' }}>
-                    <div className="h-full rounded-full" style={{ width: `${cat.pct}%`, background: '#c9a96e' }} />
-                  </div>
-                  <span className="text-xs font-semibold" style={{ color: '#c9a96e' }}>{cat.pct}%</span>
-                </div>
-              </div>
-            ))}
+          {/* Quick links */}
+          <div className="px-5 py-4" style={{ borderTop: `1px solid ${P.border}`, background: P.surface }}>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: P.muted }}>
+              Akses Cepat
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: 'Orders',    to: '/orders',    icon: <BsClipboardCheck size={13} /> },
+                { label: 'Customers', to: '/customers', icon: <BsPeopleFill size={13} /> },
+              ].map(item => (
+                <Link key={item.to} to={item.to}
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80"
+                  style={{ background: '#1A1614', color: '#C8A96A' }}>
+                  {item.icon}
+                  {item.label}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </div>
